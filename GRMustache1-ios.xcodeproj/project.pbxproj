@@ -900,6 +900,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_UNIVERSAL_IPHONE_OS)";
 				DSTROOT = /tmp/GRMustache1.dst;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "GRMustache1/GRMustache1-Prefix.pch";
@@ -911,6 +912,7 @@
 				PRIVATE_HEADERS_FOLDER_PATH = /include;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = /include;
+				VALID_ARCHS = " i386 x86_64 armv7";
 			};
 			name = Debug;
 		};
@@ -918,6 +920,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_UNIVERSAL_IPHONE_OS)";
 				DSTROOT = /tmp/GRMustache1.dst;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "GRMustache1/GRMustache1-Prefix.pch";
@@ -929,6 +932,7 @@
 				PRIVATE_HEADERS_FOLDER_PATH = /include;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = /include;
+				VALID_ARCHS = " i386 x86_64 armv7";
 			};
 			name = Release;
 		};
