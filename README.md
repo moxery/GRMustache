@@ -1,651 +1,213 @@
 GRMustache
 ==========
 
-GRMustache is an Objective-C implementation of the [Mustache](http://mustache.github.com/) logic-less template engine, for MacOS 10.6, iPhoneOS 3.0 and iOS 4.0
+GRMustache is a flexible and production-ready implementation of [Mustache](http://mustache.github.io/) templates for MacOS Cocoa and iOS.
 
-It supports the following Mustache features:
+GRMustache targets iOS down to version 4.3, MacOS down to 10.6 Snow Leopard (with or without garbage collection), and only depends on the Foundation framework.
 
-- variables
-- sections (boolean, enumerable, inverted, helpers)
-- partials (and recursive partials)
-- delimiter changes
-- comments
+**August 10, 2013: GRMustache 6.8.2 is out.** [Release notes](RELEASE_NOTES.md)
 
-It supports extensions to the [regular Mustache syntax](http://mustache.github.com/mustache.5.html):
+Get release announcements and usage tips: follow [@GRMustache on Twitter](http://twitter.com/GRMustache).
 
-- dot variable tag: `{{.}}` (introduced by [mustache.js](http://github.com/janl/mustache.js))
-- extended paths, as in `{{../name}}` (introduced by [Handlebars.js](https://github.com/wycats/handlebars.js))
-
-### Embedding in your XCode project
-
-GRMustache ships as a static library and a bunch of header files, and only depends on the Foundation.framework.
-
-Follow the instructions in the [Embedding](https://github.com/groue/GRMustache/wiki/Embedding) wiki page, and import `GRMustache.h` in order to access all GRMustache features.
-
-### Versioning and backward compatibility
-
-Until GRMustache hits version 2, there is no risk upgrading GRMustache in your project: you will get bugfixes and improvements without changing a line of your code.
-
-You may well get deprecation warnings, but these are only warnings. Support for deprecated APIs will only be removed in the next major version.
-
-This is because GRMustache versioning policy complies to the one defined by the [Apache APR](http://apr.apache.org/versioning.html).
-
-Check the [release notes](https://github.com/groue/GRMustache/blob/master/RELEASE_NOTES.md) for more information, and [Follow us on twitter](http://twitter.com/GRMustache) for breaking development news.
-
-### Testing
-
-Open the GRMustache1-macosx.xcodeproj project and test the GRMustache1 target.
-
-GRMustache is tested against the [core](https://github.com/groue/Mustache-Spec/tree/master/specs/core/), [file_system](https://github.com/groue/Mustache-Spec/tree/master/specs/file_system/), [dot_key](https://github.com/groue/Mustache-Spec/tree/master/specs/dot_key/), and [extended_path](https://github.com/groue/Mustache-Spec/tree/master/specs/extended_path/) modules of the [Mustache-Spec](https://github.com/groue/Mustache-Spec) project. More tests come from the [Ruby](http://github.com/defunkt/mustache) implementation.
-
-### Forking
-
-Please fork, and read the [Note on forking](https://github.com/groue/GRMustache/wiki/Note-on-forking) wiki page.
-
-### Advanced topics
-
-This README file provides with basic GRMustache documentation. Check out the [wiki](https://github.com/groue/GRMustache/wiki) for discussions on some more advanced topics.
-
-Simple example
---------------
-
-	#import "GRMustache.h"
-	
-	NSDictionary *object = [NSDictionary dictionaryWithObject:@"Mom" forKey:@"name"];
-	[GRMustacheTemplate renderObject:object fromString:@"Hi {{name}}!" error:nil];
-	// returns @"Hi Mom!"
-
-Rendering methods
------------------
-
-The main rendering methods provided by the GRMustacheTemplate class are:
-
-	// Renders the provided templateString.
-	+ (NSString *)renderObject:(id)object
-	                fromString:(NSString *)templateString
-	                     error:(NSError **)outError;
-	
-	// Renders the template loaded from a url. (from MacOS 10.6 and iOS 4.0)
-	+ (NSString *)renderObject:(id)object
-	         fromContentsOfURL:(NSURL *)url
-	                     error:(NSError **)outError;
-	
-	// Renders the template loaded from a path.
-	+ (NSString *)renderObject:(id)object
-	        fromContentsOfFile:(NSString *)path
-	                     error:(NSError **)outError;
-	
-	// Renders the template loaded from a bundle resource of extension "mustache".
-	+ (NSString *)renderObject:(id)object
-	              fromResource:(NSString *)name
-	                    bundle:(NSBundle *)bundle
-	                     error:(NSError **)outError;
-	
-	// Renders the template loaded from a bundle resource of provided extension.
-	+ (NSString *)renderObject:(id)object
-	              fromResource:(NSString *)name
-	             withExtension:(NSString *)ext
-	                    bundle:(NSBundle *)bundle
-	                     error:(NSError **)outError;
-
-All methods may return errors, described in the "Errors" section below.
-
-Compiling templates
--------------------
-
-If you are planning to render the same template multiple times, it is more efficient to parse it once, with the compiling methods of the GRMustacheTemplate class:
-
-	// Parses the templateString.
-	+ (id)parseString:(NSString *)templateString
-	            error:(NSError **)outError;
-	
-	// Loads and parses the template from url. (from MacOS 10.6 and iOS 4.0)
-	+ (id)parseContentsOfURL:(NSURL *)url
-	                   error:(NSError **)outError;
-	
-	// Loads and parses the template from path.
-	+ (id)parseContentsOfFile:(NSString *)path
-	                    error:(NSError **)outError;
-	
-	// Loads and parses the template from a bundle resource of extension "mustache".
-	+ (id)parseResource:(NSString *)name
-	             bundle:(NSBundle *)bundle
-	              error:(NSError **)outError;
-	
-	// Loads and parses the template from a bundle resource of provided extension.
-	+ (id)parseResource:(NSString *)name
-	      withExtension:(NSString *)ext
-	             bundle:(NSBundle *)bundle
-	              error:(NSError **)outError;
-
-Those methods return GRMustacheTemplate instances, which render objects with the following method:
-
-	- (NSString *)renderObject:(id)object;
-
-For instance:
-
-	// Compile template
-	GRMustacheTemplate *template = [GRMustacheTemplate parseString:@"Hi {{name}}!" error:nil];
-	// @"Hi Mom!"
-	[template renderObject:[NSDictionary dictionaryWithObject:@"Mom" forKey:@"name"]];
-	// @"Hi Dad!"
-	[template renderObject:[NSDictionary dictionaryWithObject:@"Dad" forKey:@"name"]];
-	// @"Hi !"
-	[template renderObject:nil];
-	// @"Hi !", shortcut to renderObject:nil
-	[template render];
-
-Context objects
----------------
-
-You will provide a rendering method with a context object.
-
-Mustache tag names are looked for in the context object, through the standard Key-Value Coding method `valueForKey:`.
-
-The most obvious objects which support KVC are dictionaries. You may also provide with any other object:
-
-	@interface Person: NSObject
-	+ (id)personWithName:(NSString *)name;
-	- (NSString *)name;
-	@end
-
-	// returns @"Hi Mom!"
-	[GRMustacheTemplate renderObject:[Person personWithName:@"Mom"]
-	                      fromString:@"Hi {{name}}!"
-	                           error:nil];
-
-A KVC key miss can raise a NSUndefinedKeyException. GRMustache catches those exceptions:
-
-	// doesn't raise, and returns @"Hi !"
-	[GRMustacheTemplate renderObject:[Person personWithName:@"Mom"]
-	                      fromString:@"Hi {{XXX}}!"
-	                           error:nil];
-
-Those exceptions are part of the regular rendering of a template. Yet, when debugging your project, they may become an annoyance. Check the [Avoid the NSUndefinedKeyException attack](https://github.com/groue/GRMustache/wiki/Avoid-the-NSUndefinedKeyException-attack) wiki page.
-
-Tag types
----------
-
-We'll now cover all mustache tag types, and how they are rendered.
-
-But let's give some definitions first:
-
-- GRMustache considers *enumerable* all objects conforming to the NSFastEnumeration protocol, but NSDictionary. The most obvious enumerable is NSArray.
-
-- GRMustache considers *false* KVC key misses, and the following values: `nil`, `[NSNull null]`, `[NSNumber numberWithBool:NO]`, `kCFBooleanFalse`, and the empty string `@""`.
-
-The topic of booleans is not trivial. Check the [Booleans](https://github.com/groue/GRMustache/wiki/Booleans) wiki page.
-
-### Comments `{{!...}}`
-
-Comments tags are not rendered.
-
-### Variable tags `{{name}}`
-
-Such a tag is rendered according to the value for key `name` in the context.
-
-If the value is *false*, the tag is not rendered.
-
-Otherwise, it is rendered with the regular string description of the value, HTML escaped.
-
-### Unescaped variable tags `{{{name}}}` and `{{&name}}`
-
-Such a tag is rendered according to the value for key `name` in the context.
-
-If the value is *false*, the tag is not rendered.
-
-Otherwise, it is rendered with the regular string description of the value, without HTML escaping.
-
-### Sections `{{#name}}...{{/name}}`
-
-Sections are rendered differently, depending on the value for key `name` in the context:
-
-#### False sections
-
-If the value is *false*, the section is not rendered.
-
-The topic of booleans is not trivial. Check the [Booleans](https://github.com/groue/GRMustache/wiki/Booleans) wiki page.
-
-#### Enumerable sections
-
-If the value is *enumerable*, the text between the `{{#name}}` and `{{/name}}` tags is rendered once for each item in the enumerable.
-
-Each item becomes the context while being rendered. This is how you iterate over a collection of objects:
-
-	My shopping list:
-	{{#items}}
-	- {{name}}
-	{{/items}}
-
-When a key is missed at the item level, it is looked for in the enclosing context.
-
-#### Helper sections
-
-Read below "Helpers", which covers in detail how GRMustache allows you to provide custom code for rendering sections.
-
-#### Other sections
-
-Otherwise - if the value is not enumerable, false, or helper - the content of the section is rendered once.
-
-The value becomes the context while being rendered. This is how you traverse an object hierarchy:
-
-	{{#me}}
-	  {{#mother}}
-	    {{#father}}
-	      My mother's father was named {{name}}.
-	    {{/father}}
-	  {{/mother}}
-	{{/me}}
-
-When a key is missed, it is looked for in the enclosing context. This is the base mechanism for templates like:
-
-	{{! If there is a title, render it in a <h1> tag }}
-	{{#title}}
-	  <h1>{{title}}</h1>
-	{{/title}}
-
-### Inverted sections `{{^name}}...{{/name}}`
-
-Such a section is rendered when the `{{#name}}...{{/name}}` section would not: in the case of false values, or empty enumerables.
-
-### Partials `{{>partial_name}}`
-
-A `{{>partial_name}}` tag is rendered as a partial loaded from the file system.
-
-Partials must have the same extension as their including template.
-
-Recursive partials are possible. Just avoid infinite loops in your context objects.
-
-Depending on the method which has been used to create the original template, partials will be looked for in different places :
-
-- In the main bundle:
-	- `renderObject:fromString:error:`
-	- `parseString:error:`
-- In the specified bundle:
-	- `renderObject:fromResource:bundle:error:`
-	- `renderObject:fromResource:withExtension:bundle:error:`
-	- `parseResource:bundle:error:`
-	- `parseResource:withExtension:bundle:error:`
-- Relatively to the URL of the including template:
-	- `renderObject:fromContentsOfURL:error:`
-	- `parseContentsOfURL:error:`
-- Relatively to the path of the including template:
-	- `renderObject:fromContentsOfFile:error:`
-	- `parseContentsOfFile:error:`
-
-The "Template loaders" section below will show you more partial loading GRMustache features.
-
-Dot key and extended paths
---------------------------
-
-### Extended paths
-
-GRMustache supports extended paths introduced by [Handlebars.js](https://github.com/wycats/handlebars.js). Paths are made up of typical expressions and / characters. Expressions allow you to not only display data from the current context, but to display data from contexts that are descendents and ancestors of the current context.
-
-To display data from descendent contexts, use the / character. So, for example, if your context were structured like:
-
-	context = [NSDictionary dictionaryWithObjectsAndKeys:
-	           [Person personWithName:@"Alan"], @"person",
-	           [Company companyWithName:@"Acme"], @"company",
-	           nil];
-
-you could display the person's name from the top-level context with the following expression:
-
-	{{person/name}}
-
-Similarly, if already traversed into the person object you could still display the company's name with an expression like ``{{../company/name}}`, so:
-
-	{{#person}}{{name}} - {{../company/name}}{{/person}}
-
-would render:
-
-	Alan - Acme
-
-### Dot key
-
-Consistently with "`..`", the dot "`.`" stands for the current context itself. This dot key can be useful when iterating a list of scalar objects. For instance, the following context:
-
-	context = [NSDictionary dictionaryWithObject:[NSArray arrayWithObjects: @"beer", @"ham", nil]
-	                                      forKey:@"item"];
-
-renders:
-
-	<ul><li>beer</li><li>ham</li></ul>
-
-when applied to the template:
-
-	<ul>{{#item}}<li>{{.}}</li>{{/item}}</ul>
-
-Helpers
--------
-
-Imagine that, in the following template, you wish the `link` sections to be rendered as hyperlinks:
-
-	<ul>
-	  {{#people}}
-	  <li>{{#link}}{{name}}{{/link}}</li>
-	  {{/people}}
-	</ul>
-
-We expect, as an output, something like:
-
-	<ul>
-	  <li><a href="/people/1">Roger</a></li>
-	  <li><a href="/people/2">Amy</a></li>
-	</ul>
-
-GRMustache provides you with two ways in order to achieve this behavior. The first one uses Objective-C blocks, the second requires some selectors to be implemented.
-
-### Block helpers
-
-*Note that block helpers are not available until MacOS 10.6, and iOS 4.0.*
-
-You will provide in the context a GRMustacheBlockHelper instance, built with a block which returns the string that should be rendered:
-
-	id linkHelper = [GRMustacheBlockHelper helperWithBlock:(^(GRMustacheSection *section, id context) {
-	  return [NSString stringWithFormat:
-	          @"<a href=\"/people/%@\">%@</a>",
-	          [context valueForKey:@"id"],    // id of person comes from current context
-	          [section renderObject:context]] // link text comes from the natural rendering of the inner section
-	}];
-
-The block takes two arguments:
-
-- `section` is an object which represents the rendered section.
-- `context` is the current rendering context.
-
-The `[section renderObject:context]` expression evaluates to the rendering of the section with the given context.
-
-In case you would need it, the `section` object has a `templateString` property, which contains the litteral inner section, unrendered (`{{tags}}` will not have been expanded).
-
-The final rendering now goes as usual, by providing objects for template keys, the helper for the key `link`, and some people for the key `people`:
-
-	NSArray *people = ...;
-	[template renderObject:[NSDictionary dictionaryWithObjectsAndKeys:
-	                        linkHelper, @"link",
-	                        people, @"people",
-	                        nil]];
-
-### Helper methods
-
-Another way to execute code when rendering the `link` sections is to have the context implement the `linkSection:withContext:` selector (generally, implement a method whose name is the name of the section, to which you append `Section:withContext:`).
-
-No block is involved, and this technique works before MacOS 10.6, and iOS 4.0.
-
-Now the question is: which class should implement this helper selector? When the `{{#link}}` section is rendered, GRMustache is actually rendering a person. Remember the template itself:
-
-	<ul>
-	  {{#people}}
-	  <li>{{#link}}{{name}}{{/link}}</li>
-	  {{/people}}
-	</ul>
-
-Many objects are in the context and can provide the implementation: the person itself, the `people` array of persons, the object that did provide this array, up to the root, the object which has been initially provided to the template.
-
-Let's narrow those choices to only two: either you have your model objects implement the `linkSection:withContext:` selector, or you isolate helper methods from your model.
-
-#### Isolating helper methods
-
-In order to achieve a strict MVC separation, one might want to isolate helper methods from data.
-
-GRMustache allows you to do that: first declare a container for your helper methods:
-
-	@interface RenderingHelper: NSObject
-	@end
-	
-	@implementation RenderingHelper
-	+ (NSString*)linkSection:(GRMustacheSection *)section
-	             withContext:(id)context
-	{
-	  return [NSString stringWithFormat:
-	          @"<a href=\"/people/%@\">%@</a>",
-	          [context valueForKey:@"id"],      // id of person comes from current context
-	          [section renderObject:context]];  // link text comes from the natural rendering of the inner section
-	}
-	@end
-
-Here we have written class methods because our helper doesn't carry any state. You are free to define helpers as instance methods, too.
-
-And now we can render:
-
-	[template renderObjects:[RenderingHelper class], dataModel, nil];
-
-The `renderObjects:` method takes several context objects. Key-value Coding lookup will start from the last provided object (in the above example, `dataModel`). The `{{#link}}` section of the template will thus be eventually be handled by the RenderingHelper class.
-
-
-#### Helpers as a model category
-
-You may also declare helper methods in categories of your model objects. For instance, if your model object is designed as such:
-
-	@interface DataModel
-	@property NSArray *people;  // array of Person objects
-	@end
-	
-	@interface Person
-	@property NSString *name;
-	@property NSString *id;
-	@end
-
-You can declare the `linkSection:withContext:` in a category of Person:
-
-	@implementation Person(GRMustache)
-	- (NSString*)linkSection:(GRMustacheSection *)section
-	             withContext:(id)context
-	{
-	  return [NSString stringWithFormat:
-	          @"<a href=\"/people/%@\">%@</a>",
-	          self.id,                          // id comes from self
-	          [section renderObject:context]];  // link text comes from the natural rendering of the inner section
-	}
-	@end
-
-This mix of data and rendering code in a single class is a debatable pattern. Well, you can compare this to the NSString(UIStringDrawing) and NSString(AppKitAdditions) categories. Furthermore, a strict MVC separation mechanism is described above.
-
-Anyway, the rendering can now be done with:
-
-	DataModel *dataModel = ...;
-	[template renderObject:dataModel];
-
-
-#### Usages of helpers
-
-Helpers can be used for whatever you may find relevant.
-
-You may localize:
-
-	// {{#NSLocalizedString}}...{{/NSLocalizedString}}
-	+ (NSString *)NSLocalizedStringSection:(GRMustacheSection *)section withContext:(id)context {
-	  return NSLocalizedString([section renderObject:context]);
-	}
-
-You may implement caching:
-
-	// {{#cached}}...{{/cached}}
-	- (NSString *)cachedSection:(GRMustacheSection *)section withContext:(id)context {
-	  if (self.cache == nil) { self.cache = [section renderObject:context]; }
-	  return self.cache;
-	};
-
-You may render an extended context:
-
-	// {{#extended}}...{{/extended}}
-	+ (NSString *)extendedSection:(GRMustacheSection *)section withContext:(id)context {
-	  return [section renderObjects:context, ...];
-	});
-
-You may render a totally different context:
-
-	// {{#alternative}}...{{/alternative}}
-	+ (NSString *)alternativeSection:(GRMustacheSection *)section withContext:(id)context {
-	  return [section renderObject:[NSDictionary ...]];
-	});
-
-You may implement debugging sections:
-
-	// {{#debug}}...{{/debug}}
-	+ (NSString *)debugSection:(GRMustacheSection *)section withContext:(id)context {
-	  NSLog(section.templateString);         // log the unrendered section 
-	  NSLog([section renderObject:context]); // log the rendered section 
-	  return nil;                            // don't render anything
-	});
-
-
-Template loaders
-----------------
-
-### Fine tuning loading of templates
-
-The GRMustacheTemplateLoader class is able to load templates and their partials from anywhere in the file system, and provides more options than the high-level methods already seen.
-
-You may instantiate one with the following GRMustacheTemplateLoader class methods:
-
-	// Loads templates and partials from a directory, with "mustache" extension, encoded in UTF8 (from MacOS 10.6 and iOS 4.0)
-	+ (id)templateLoaderWithBaseURL:(NSURL *)url;
-
-	// Loads templates and partials from a directory, with provided extension, encoded in UTF8 (from MacOS 10.6 and iOS 4.0)
-	+ (id)templateLoaderWithBaseURL:(NSURL *)url
-	                      extension:(NSString *)ext;
-
-	// Loads templates and partials from a directory, with provided extension, encoded in provided encoding (from MacOS 10.6 and iOS 4.0)
-	+ (id)templateLoaderWithBaseURL:(NSURL *)url
-	                      extension:(NSString *)ext
-	                       encoding:(NSStringEncoding)encoding;
-	
-	// Loads templates and partials from a directory, with "mustache" extension, encoded in UTF8
-	+ (id)templateLoaderWithDirectory:(NSString *)path;
-
-	// Loads templates and partials from a directory, with provided extension, encoded in UTF8
-	+ (id)templateLoaderWithDirectory:(NSString *)path
-	                        extension:(NSString *)ext;
-
-	// Loads templates and partials from a directory, with provided extension, encoded in provided encoding
-	+ (id)templateLoaderWithDirectory:(NSString *)path
-	                        extension:(NSString *)ext
-	                         encoding:(NSStringEncoding)encoding;
-	
-	// Loads templates and partials from a bundle, with "mustache" extension, encoded in UTF8
-	+ (id)templateLoaderWithBundle:(NSBundle *)bundle;
-	
-	// Loads templates and partials from a bundle, with provided extension, encoded in UTF8
-	+ (id)templateLoaderWithBundle:(NSBundle *)bundle
-	                     extension:(NSString *)ext;
-	
-	// Loads templates and partials from a bundle, with provided extension, encoded in provided encoding
-	+ (id)templateLoaderWithBundle:(NSBundle *)bundle
-	                     extension:(NSString *)ext
-	                      encoding:(NSStringEncoding)encoding;
-
-Once you have a GRMustacheTemplateLoader object, you may load a template from its location:
-
-	GRMustacheTemplate *template = [loader parseTemplateNamed:@"document" error:nil];
-
-You may also have the loader parse a template string. Only partials would then be loaded from the loader's location:
-
-	GRMustacheTemplate *template = [loader parseString:@"..." error:nil];
-
-The rendering is done as usual:
-
-	NSString *rendering = [template renderObject:...];
-
-Also don't miss the [Implementing your own template loading strategy](https://github.com/groue/GRMustache/wiki/Implementing-your-own-template-loading-strategy) page in the wiki: you will learn how to subclass GRMustacheTemplateLoader in order to load templates and partials from anywhere.
-
-Errors
+How To
 ------
 
-The GRMustache library may return errors whose domain is GRMustacheErrorDomain.
+### 1. Setup your Xcode project
 
-	extern NSString* const GRMustacheErrorDomain;
+You have three options, from the simplest to the hairiest:
 
-Their error codes may be interpreted with the GRMustacheErrorCode enumeration:
-
-	typedef enum {
-		GRMustacheErrorCodeParseError,
-		GRMustacheErrorCodeTemplateNotFound,
-	} GRMustacheErrorCode;
+- [CocoaPods](Guides/installation.md#option-1-cocoapods)
+- [Static Library](Guides/installation.md#option-2-static-library)
+- [Compile the raw sources](Guides/installation.md#option-3-compiling-the-raw-sources)
 
 
-A less simple example
+### 2. Start rendering templates
+
+```objc
+#import "GRMustache.h"
+
+// Renders "Hello Arthur!"
+NSString *rendering = [GRMustacheTemplate renderObject:@{ @"name": @"Arthur" }
+                                            fromString:@"Hello {{name}}!"
+                                                 error:NULL];
+
+// Renders a document from the `Profile.mustache` resource
+GRMustacheTemplate *template = [GRMustacheTemplate templateFromResource:@"Profile" bundle:nil error:NULL];
+NSString *rendering = [template renderObject:self.currentUser error:NULL];
+```
+
+[GRMustachio](https://github.com/mugginsoft/GRMustachio) by Jonathan Mitchell is "A super simple, interactive GRMustache based application". It can help you design and test your templates.
+
+Documentation
+-------------
+
+### Mustache syntax
+
+- http://mustache.github.io/mustache.5.html
+
+### Reference
+
+- [Reference](http://groue.github.io/GRMustache/Reference/): the GRMustache reference, automatically generated from inline documentation, for fun and profit, by [appledoc](http://gentlebytes.com/appledoc/).
+
+### Guides
+
+Introduction:
+
+- [Introduction](Guides/introduction.md): a tour of the library features, and most common use cases.
+
+Basics:
+
+- [Templates](Guides/templates.md): how to load templates.
+- [Partials](Guides/partials.md): decompose your templates into components named "partials".
+- [Templates Repositories](Guides/template_repositories.md): manage groups of templates.
+- [Runtime](Guides/runtime.md): how GRMustache renders your data.
+- [ViewModel](Guides/view_model.md): an overview of various techniques to feed templates.
+
+Services:
+
+- [Configuration](Guides/configuration.md)
+- [HTML vs. Text templates](Guides/html_vs_text.md)
+- [Standard Library](Guides/standard_library.md): built-in candy, for your convenience.
+- [NSFormatter](Guides/NSFormatter.md), NSNumberFormatter, NSDateFormatter, etc. Use them.
+
+Hooks:
+
+- [Filters](Guides/filters.md): `{{ uppercase(name) }}` et al.
+- [Rendering Objects](Guides/rendering_objects.md): "Mustache lambdas", and more.
+- [Tag Delegates](Guides/delegate.md): observe and alter template rendering.
+- [Protected Contexts](Guides/protected_contexts.md): protect some keys so that they always evaluate to the same value.
+
+Mustache, and beyond:
+
+- [Compatibility](Guides/compatibility.md): compatibility with other Mustache implementations, in details.
+
+### Sample code
+
+Check the [FAQ](#faq) right below.
+
+
+FAQ
+---
+
+- **Q: I get "unrecognized selector sent to instance" errors.**
+    
+    A: Check that you have added the `-ObjC` option in the "Other Linker Flags" of your target ([how to](http://developer.apple.com/library/mac/#qa/qa1490/_index.html)).
+
+- **Q: Is it possible to render array indexes? Customize first and last elements? Distinguish odd and even items, play fizzbuzz?**
+    
+    A: [Yes, yes, and yes](Guides/sample_code/indexes.md)
+
+- **Q: Is it possible to format numbers and dates?**
+    
+    A: Yes. Use [NSNumberFormatter and NSDateFormatter](Guides/NSFormatter.md).
+
+- **Q: Is it possible to pluralize/singularize strings?**
+    
+    A: Yes. You have some [sample code](https://github.com/groue/GRMustache/issues/50#issuecomment-16197912) in issue #50. You may check [@mattt's InflectorKit](https://github.com/mattt/InflectorKit) for actual inflection methods.
+
+- **Q: Is it possible to write Handlebars-like helpers?**
+    
+    A: [Yes](Guides/rendering_objects.md)
+
+- **Q: Is it possible to localize templates?**
+
+    A: [Yes](Guides/standard_library.md#localize)
+
+- **Q: Is it possible to embed partial templates whose name is only known at runtime?**
+
+    A: [Yes](Guides/rendering_objects.md)
+
+- **Q: Does GRMustache provide any layout or template inheritance facility?**
+    
+    A: [Yes](Guides/partials.md)
+
+- **Q: Is it possible to render a default value for missing keys?**
+
+    A: [Yes](Guides/view_model.md#default-values).
+
+- **Q: Is it possible to disable HTML escaping?**
+
+    A: [Yes](Guides/html_vs_text.md)
+
+- **Q: What is this NSUndefinedKeyException stuff?**
+
+    A: When GRMustache has to try several objects until it finds the one that provides a `{{key}}`, several NSUndefinedKeyException may be raised and caught. It's likely that you wish Xcode would stop breaking on those exceptions: see the [Runtime Guide](Guides/runtime.md#nsundefinedkeyexception-prevention).
+
+- **Q: Why does GRMustache need JRSwizzle?**
+
+    A: GRMustache does not need it, and does not swizzle anything unless you explicitly ask for it. `[GRMustache preventNSUndefinedKeyExceptionAttack]` swizzles NSObject's `valueForUndefinedKey:` in order to prevent NSUndefinedKeyException during template rendering.
+    
+    You will debug your application without Xcode's exception breakpoint disturbing you. You may even improve rendering performances. See the [Runtime Guide](Guides/runtime.md#nsundefinedkeyexception-prevention).
+
+What other people say
 ---------------------
 
-Let's be totally mad, and display a list of people and their birthdates in a UIWebView embedded in our iOS application.
+[@JeffSchilling](https://twitter.com/jeffschilling/status/142374437776408577):
 
-We'll most certainly have a UIViewController for displaying the web view:
+> I'm loving grmustache
 
-	@interface PersonListViewController: UIViewController
-	@property (nonatomic, retain) NSArray *persons;
-	@property (nonatomic, retain) IBOutlet UIWebView *webView;
-	@end
+[@basilshkara](https://twitter.com/basilshkara/status/218569924296187904):
 
-The `persons` array contains some instances of our Person model:
+> Oh man GRMustache saved my ass once again. Awesome lib.
 
-	@interface Person: NSObject
-	@property (nonatomic, retain) NSString *name;
-	@property (nonatomic, retain) NSDate *birthdate;
-	@end
+[@guiheneuf](https://twitter.com/guiheneuf/status/249061029978460160):
 
-A PersonListViewController instance and its array of persons is a graph of objects that is already perfectly suitable for rendering our template:
+> GRMustache filters extension saved us from great escaping PITAs. Thanks @groue.
 
-	PersonListViewController.mustache:
-	
-	<html>
-	<body>
-	<dl>
-	  {{#persons}}
-	  <dt>{{name}}</dt>
-	  <dd>{{localizedBirthdate}}</dd>
-	  {{/persons}}
-	</dl>
-	</body>
-	</html>
+[@orj](https://twitter.com/orj/status/195310301820878848):
 
-We already see the match between our classes' properties, and the `persons` and `name` keys. More on the `birthdate` vs. `localizedBirthdate` later.
+> Thank fucking christ for decent iOS developers who ship .lib files in their Github repos. #GRMustache
 
-We should already be able to render most of our template:
+[@SebastienPeek](https://twitter.com/sebastienpeek/status/290700413152423936)
 
-	@implementation PersonListViewController
-	- (void)viewWillAppear:(BOOL)animated {
-	  // Let's use self as the rendering context:
-	  NSString *html = [GRMustacheTemplate renderObject:self
-	                                       fromResource:@"PersonListViewController"
-	                                       bundle:nil
-	                                       error:nil];
-	  [self.webView loadHTMLString:html baseURL:nil];
-	}
-	@end
+> @issya should see the HTML template I built, pretty wicked. GRMustache is the best.
 
-Now our `{{#persons}}` enumerable section and `{{name}}` variable tag will perfectly render.
+[@mugginsoft](https://twitter.com/mugginsoft/status/294758563698597888)
 
-What about the `{{localizedBirthdate}}` tag?
+> Using GRMustache (Cocoa) for template processing. Looks like a top quality library. Good developer and good units tests. Get it on GitHub.
 
-Since we don't want to pollute our nice and clean Person model, let's add a category to it:
+[@dannolan](https://twitter.com/dannolan/status/301088034173120512)
 
-	@interface Person(GRMustache)
-	@end
+> okay GRMustache is the fucking daddy
 
-	static NSDateFormatter *dateFormatter = nil;
-	@implementation Person(GRMustache)
-	- (NSString *)localizedBirthdate {
-	  if (dateFormatter == nil) {
-	    dateFormatter = [[NSDateFormatter alloc] init];
-	    [dateFormatter setDateStyle:NSDateFormatterLongStyle];
-	    [dateFormatter setTimeStyle:NSDateFormatterNoStyle];
-	  }
-	  return [dateFormatter stringFromDate:date];
-	}
-	@end
+[@OldManKris](https://twitter.com/oldmankris/status/307683824362483712)
 
-And we're ready to go!
+> GRMustache is teh awesome. Nice to find an open-source library that is more pleasant to use than expected.
+
+
+Who's using GRMustache
+----------------------------------------
+
+* [tomaz/appledoc](https://github.com/tomaz/appledoc): Objective-c code Apple style documentation set generator.
+* [mapbox/mapbox-ios-sdk](https://github.com/mapbox/mapbox-ios-sdk): MapBox iOS SDK, an open source alternative to MapKit.
+* [CarterA/Tribo](https://github.com/CarterA/Tribo): Extremely fast static site generator written in Objective-C.
+* [AutoLib](http://itunes.com/apps/autolib) uses GRMustache and [spullara/mustache.java](https://github.com/spullara/mustache.java) for rendering an identical set of Mustache templates on iOS and Android.
+* [Bee](http://www.neat.io/bee): Bee is a desktop bug tracker for the Mac. It currently syncs with GitHub Issues, JIRA and FogBugz.
+* [CinéObs](http://itunes.com/apps/cineobs) uses GRMustache for RSS feeds rendering.
+* [Fotopedia](http://itunes.com/apps/fotonautsinc), the first collaborative photo encyclopedia.
+* [FunGolf GPS](http://itunes.com/apps/fungolf), a golf app with 3D maps.
+* [KosmicTask](http://www.mugginsoft.com/kosmictask), an integrated scripting environment for OS X that supports more than 20 scripting languages.
+* [MyInvoice](http://www.myinvoice.biz/en), an invoicing iOS app.
+* [Servus](https://servus.io) can turn any file on your computer into a branded download page hosted on Dropbox.
+
+Do you use GRMustache? [Tweet me your story and your link](http://twitter.com/GRMustache).
+
+
+Contribution wish-list
+----------------------
+
+Please look for an [open issue](GRMustache/issues) that smiles at you!
+
+... And I wish somebody would review the non-native English of the documentation and guides.
+
+
+Forking
+-------
+
+Please fork. You'll learn useful information in the [Forking Guide](Guides/forking.md).
+
 
 License
 -------
 
-Released under the [MIT License](http://en.wikipedia.org/wiki/MIT_License)
-
-Copyright (c) 2010 Gwendal Roué
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+Released under the [MIT License](LICENSE).
